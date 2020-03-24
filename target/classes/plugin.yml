@@ -1,8 +1,0 @@
-name: TeamCore
-main: io.teamplayer.teamcore.TeamCore
-version: 2
-depend: ['ProtocolLib']
-commands:
-  fakespawn:
-  test:
-  slime:
