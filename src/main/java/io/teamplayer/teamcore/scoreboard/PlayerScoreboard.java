@@ -2,9 +2,11 @@ package io.teamplayer.teamcore.scoreboard;
 
 import com.comphenix.packetwrapper.WrapperPlayServerScoreboardObjective;
 import com.comphenix.packetwrapper.WrapperPlayServerScoreboardTeam;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import org.apache.commons.lang3.Validate;
+import org.bukkit.ChatColor;
+import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.Validate;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
 
@@ -22,12 +24,6 @@ class PlayerScoreboard {
 
     private static final char[] lineNames = new char[SCOREBOARD_SIZE];
 
-    private final Player player;
-    private final Objective objective;
-    private final Scoreboard scoreboard;
-
-    private final String[] lines = new String[SCOREBOARD_SIZE];
-
     static {
         final char rangeStart = 0xE900; //This the middle of a range of unused unicode characters
         // that won't render as anything in the minecraft client
@@ -35,6 +31,11 @@ class PlayerScoreboard {
             lineNames[i - rangeStart] = i;
         }
     }
+
+    private final Player player;
+    private final Objective objective;
+    private final Scoreboard scoreboard;
+    private final String[] lines = new String[SCOREBOARD_SIZE];
 
     PlayerScoreboard(Player player, Scoreboard scoreboard) {
         this.player = player;
@@ -91,16 +92,16 @@ class PlayerScoreboard {
         packet.setMode(WrapperPlayServerScoreboardTeam.Mode.TEAM_UPDATED);
         packet.setNameTagVisibility("always");
         packet.setCollisionRule("always");
-        packet.setColor(-1); //-1 means no color
+        packet.setColor(ChatColor.WHITE); //-1 means no color
 
         //Setting the team prefix and suffix forms the content
-        packet.setPrefix(content.substring(0, Math.min(content.length(), TEAM_PRESUF_SIZE)));
+        packet.setPrefix(WrappedChatComponent.fromText(content.substring(0, Math.min(content.length(),
+                TEAM_PRESUF_SIZE))));
         if (content.length() > TEAM_PRESUF_SIZE) {
-            packet.setSuffix((content.charAt(TEAM_PRESUF_SIZE - 1) == '§' ? '§' : "") + //Accounts
-                    // for a formatting symbol right before the cutoff
-                    content.substring(TEAM_PRESUF_SIZE));
+            packet.setSuffix(WrappedChatComponent.fromText((content.charAt(TEAM_PRESUF_SIZE - 1) == '§' ?
+                '§' : "") + content.substring(TEAM_PRESUF_SIZE)));
         } else {
-            packet.setSuffix("");
+            packet.setSuffix(WrappedChatComponent.fromText(""));
         }
 
         packet.sendPacket(player);
@@ -118,7 +119,7 @@ class PlayerScoreboard {
         final WrapperPlayServerScoreboardObjective packet = new WrapperPlayServerScoreboardObjective();
 
         packet.setName(objective.getName());
-        packet.setDisplayName(content);
+        packet.setDisplayName(WrappedChatComponent.fromText(content));
         packet.setMode(WrapperPlayServerScoreboardObjective.Mode.UPDATE_VALUE);
         packet.setHealthDisplay(WrapperPlayServerScoreboardObjective.HealthDisplay.HEARTS);
 
