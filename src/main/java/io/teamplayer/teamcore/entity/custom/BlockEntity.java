@@ -1,9 +1,10 @@
 package io.teamplayer.teamcore.entity.custom;
 
 import io.teamplayer.teamcore.util.NmsUtil;
-import net.minecraft.server.v1_11_R1.EntityFallingBlock;
+import net.minecraft.server.v1_15_R1.EntityFallingBlock;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_11_R1.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.v1_15_R1.util.CraftMagicNumbers;
+
 
 /**
  * A falling block entity that will not despawn

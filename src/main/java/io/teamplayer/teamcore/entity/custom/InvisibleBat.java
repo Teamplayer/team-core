@@ -3,9 +3,9 @@ package io.teamplayer.teamcore.entity.custom;
 import io.teamplayer.teamcore.TeamCore;
 import io.teamplayer.teamcore.util.NmsUtil;
 import io.teamplayer.teamcore.util.TeamRunnable;
-import net.minecraft.server.v1_11_R1.DamageSource;
-import net.minecraft.server.v1_11_R1.EntityBat;
-import net.minecraft.server.v1_11_R1.SoundEffect;
+import net.minecraft.server.v1_15_R1.DamageSource;
+import net.minecraft.server.v1_15_R1.EntityBat;
+import net.minecraft.server.v1_15_R1.SoundEffect;
 
 /**
  * An invisible, stationary entity used mostly for putting things on top of it's head

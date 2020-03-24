@@ -30,14 +30,14 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.11.2-R0.1-SNAPSHOT</version>
+            <version>1.15.2-R0.1-SNAPSHOT</version>
         </dependency>
 
         <!--Spigot-->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot</artifactId>
-            <version>1.11.2</version>
+            <version>1.15.2</version>
         </dependency>
 
         <!--Protocol Lib API-->
@@ -52,7 +52,7 @@
         <dependency>
             <groupId>com.comphenix</groupId>
             <artifactId>packetwrapper</artifactId>
-            <version>1.11</version>
+            <version>1.15.2</version>
         </dependency>
     </dependencies>
 
