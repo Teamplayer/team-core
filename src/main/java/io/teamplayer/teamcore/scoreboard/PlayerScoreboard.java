@@ -6,6 +6,7 @@ import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import org.bukkit.ChatColor;
+import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.StringUtils;
 import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.Validate;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
@@ -22,14 +23,17 @@ class PlayerScoreboard {
 
     private static final ListMultimap<Scoreboard, Team> teams = ArrayListMultimap.create();
 
-    private static final char[] lineNames = new char[SCOREBOARD_SIZE];
+    private static final String[] lineNames = new String[SCOREBOARD_SIZE];
+
+    private static int teamsCreated = 0;
 
     static {
         final char rangeStart = 0xE900; //This the middle of a range of unused unicode characters
         // that won't render as anything in the minecraft client
         for (char i = rangeStart; i < rangeStart + SCOREBOARD_SIZE; i++) {
-            lineNames[i - rangeStart] = i;
+            lineNames[i - rangeStart] = "§" + i ;
         }
+
     }
 
     private final Player player;
@@ -43,11 +47,18 @@ class PlayerScoreboard {
 
         if (!teams.containsKey(scoreboard)) {
             for (byte i = 0; i < SCOREBOARD_SIZE; i++) {
-                final Team team = scoreboard.registerNewTeam(Byte.toString(i));
+                final Team team;
+                final String teamName = teamsCreated + "tc";
 
+                if (scoreboard.getTeam(teamName) != null) {
+                    team = scoreboard.getTeam(teamName);
+                } else {
+                    team = scoreboard.registerNewTeam(teamsCreated + "tc");
+                }
+
+                teamsCreated++;
                 teams.put(scoreboard, team);
-
-                team.addEntry(Character.toString(lineNames[i]));
+                team.addEntry(lineNames[i]);
             }
         }
 
@@ -127,12 +138,12 @@ class PlayerScoreboard {
     }
 
     private void setVisible(byte line, boolean visible) {
-        final Score score = objective.getScore(Character.toString(lineNames[line]));
+        final Score score = objective.getScore(lineNames[line]);
 
         if (visible) {
             score.setScore(line + 1);
         } else {
-            scoreboard.resetScores(Character.toString(lineNames[line]));
+            scoreboard.resetScores(lineNames[line]);
         }
     }
 }

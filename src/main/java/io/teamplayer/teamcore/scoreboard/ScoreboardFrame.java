@@ -46,6 +46,12 @@ public class ScoreboardFrame {
         return this;
     }
 
+    /**
+     * Create a ScoreboardLine with specified content
+     *
+     * @param line content of line
+     * @return this object
+     */
     public ScoreboardFrame insert(String line) {
         return insert(new ScoreboardLine("unnamed",line));
     }
@@ -63,6 +69,9 @@ public class ScoreboardFrame {
         return (ScoreboardLine[]) ArrayUtils.subarray(lines, lines.length - getSize(), lines.length);
     }
 
+    /**
+     * Get current title of the frame
+     */
     public ScoreboardLine getTitle() {
         return title;
     }
