@@ -2,7 +2,6 @@ package io.teamplayer.teamcore.entity.fake;
 
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 
 /**
  * A client-side armor stand
@@ -10,11 +9,11 @@ import org.bukkit.entity.EntityType;
 public class FakeArmorStand extends FakeEntity {
 
     //Attributes masked inside of the metadata at index 11
-    private static final byte METADATA_INDEX = 11;
+    private static final byte METADATA_INDEX = 14;
     private final FakeArmorStandBitMask mask = new FakeArmorStandBitMask();
 
     public FakeArmorStand(Location location) {
-        super(EntityType.ARMOR_STAND, location);
+        super(1, location);
     }
 
     public boolean isSmall() {
@@ -64,6 +63,6 @@ public class FakeArmorStand extends FakeEntity {
 
 
     private void updateArmorStandMask() {
-        modifyMetadata(METADATA_INDEX, WrappedDataWatcher.Registry.get(Byte.class), mask.buildByte());
+        updateMetaData();
     }
 }

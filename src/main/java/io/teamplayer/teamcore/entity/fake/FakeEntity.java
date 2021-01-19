@@ -1,25 +1,27 @@
 package io.teamplayer.teamcore.entity.fake;
 
 import com.comphenix.packetwrapper.*;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import io.teamplayer.teamcore.immutable.ImmutableLocation;
 import io.teamplayer.teamcore.util.ClientSideObject;
+import io.teamplayer.teamcore.wrapper.WrapperPlayServerSpawnEntityLiving;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.comphenix.protocol.wrappers.WrappedDataWatcher.*;
+import static com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
+import static com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 
 /**
  * A client-side entity
  */
 public class FakeEntity implements ClientSideObject {
 
-    private final EntityType type;
+    private final int typeId;
     private String customName = "";
     private boolean customNameVisible;
 
@@ -36,13 +38,13 @@ public class FakeEntity implements ClientSideObject {
     private boolean global = true;
     private Set<Player> viewers = new HashSet<>();
 
-    public FakeEntity(EntityType type, Location location) {
-        this.type = type;
+    public FakeEntity(int typeId, Location location) {
+        this.typeId = typeId;
         this.location = location;
     }
 
-    public FakeEntity(EntityType type, Location location, boolean global) {
-        this(type, location);
+    public FakeEntity(int entityid, Location location, boolean global) {
+        this(entityid, location);
         this.global = global;
     }
 
@@ -51,9 +53,8 @@ public class FakeEntity implements ClientSideObject {
      */
     @Override
     public void spawn() {
-        final Collection<Player> viewers = getViewers();
         spawned = true;
-        spawn(viewers.toArray(new Player[viewers.size()]));
+        getViewers().forEach(this::spawn);
     }
 
     /**
@@ -123,7 +124,6 @@ public class FakeEntity implements ClientSideObject {
      */
     public void move(double xDiff, double yDiff, double zDiff) {
         if (Math.abs(xDiff) > 8 || Math.abs(yDiff) > 8 || Math.abs(zDiff) > 8) {
-            //TODO Change to use validate
             throw new IllegalArgumentException("Entity movement cannot be any more than 8 units in any direction");
         }
 
@@ -145,7 +145,7 @@ public class FakeEntity implements ClientSideObject {
     /**
      * Rotate the fake entity to the specified yaw and pitch
      *
-     * @param yaw new yaw
+     * @param yaw   new yaw
      * @param pitch new pitch
      */
     public void rotate(float yaw, float pitch) {
@@ -176,8 +176,8 @@ public class FakeEntity implements ClientSideObject {
      * @param customName the custom name
      */
     public void setCustomName(String customName) {
-        modifyMetadata((byte) 2, Registry.get(String.class), customName);
         this.customName = customName;
+        updateMetaData();
     }
 
     public String getCustomName() {
@@ -190,8 +190,8 @@ public class FakeEntity implements ClientSideObject {
      * @param customNameVisible whether or not the custom name is visible
      */
     public void setCustomNameVisible(boolean customNameVisible) {
-        modifyMetadata((byte) 3, Registry.get(Boolean.class), customNameVisible);
         this.customNameVisible = customNameVisible;
+        updateMetaData();
     }
 
     public boolean isCustomNameVisible() {
@@ -230,7 +230,7 @@ public class FakeEntity implements ClientSideObject {
     }
 
     public void setInvisible(boolean invisible) {
-        mask.setInvisible(true);
+        mask.setInvisible(invisible);
         updateEntityMask();
     }
 
@@ -334,7 +334,8 @@ public class FakeEntity implements ClientSideObject {
         final WrappedDataWatcher meta = new WrappedDataWatcher();
 
         meta.setObject(METADATA_INDEX, Registry.get(Byte.class), mask.buildByte()); //Bitmasked data
-        meta.setObject((byte) 2, Registry.get(String.class), customName);          //Custom name
+        meta.setObject((byte) 2, Registry.getChatComponentSerializer(true),
+                Optional.of(WrappedChatComponent.fromText(customName).getHandle()));          //Custom name
         meta.setObject(new WrappedDataWatcherObject(3, Registry.get(Boolean.class)),
                 customNameVisible); /*booleans need to be wrapped in a WrappedDataWatcherObject
          because there is a method that takes a boolean as it's last value which doesn't do
@@ -351,11 +352,12 @@ public class FakeEntity implements ClientSideObject {
         Arrays.stream(players).forEach(packet::sendPacket);
     }
 
-    void spawn(Player... players) {
+    void spawn(Player player) {
         final WrapperPlayServerSpawnEntityLiving packet = new WrapperPlayServerSpawnEntityLiving();
+        //final WrapperPlayServerEntityMetadata metadataPacket = new WrapperPlayServerEntityMetadata();
 
         packet.setEntityID(entityId);
-        packet.setType(type);
+        packet.setType(typeId);
 
         packet.setX(location.getX());
         packet.setY(location.getY());
@@ -365,30 +367,37 @@ public class FakeEntity implements ClientSideObject {
         packet.setPitch(location.getPitch());
         packet.setHeadPitch(location.getYaw());
 
-        packet.setMetadata(buildMetadata());
+        //metadataPacket.setEntityID(entityId);
+        //metadataPacket.setMetadata(buildMetadata().getWatchableObjects());
 
-        Arrays.stream(players).forEach(packet::sendPacket);
+
+        packet.sendPacket(player);
+        //metadataPacket.sendPacket(receiver);
+
+        updateMetaData();
     }
 
-    void modifyMetadata(byte index, Serializer serializer, Object value) {
-        if (!spawned) {
-            return;
-        }
+    void updateMetaData() {
+        getViewers().forEach(this::updateMetaData);
+    }
 
-        final WrappedDataWatcher wrappedWatcher = new WrappedDataWatcher();
+    void updateMetaData(Player player) {
+        //if (!spawned) return;
 
-        wrappedWatcher.setObject(new WrappedDataWatcherObject(index, serializer), value);
+        Bukkit.getLogger().info("Updating Metadata for " + player.getDisplayName());
 
         final WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata();
 
         packet.setEntityID(entityId);
-        packet.setMetadata(wrappedWatcher.getWatchableObjects());
+        packet.setMetadata(buildMetadata().getWatchableObjects());
 
-        sendPacket(packet);
+        Bukkit.getLogger().info(packet.toString());
+
+        packet.sendPacket(player);
     }
 
     private void updateEntityMask() {
-        modifyMetadata((byte) METADATA_INDEX, Registry.get(Byte.class), mask.buildByte());
+        updateMetaData();
     }
 
     private void sendPacket(AbstractPacket packet) {

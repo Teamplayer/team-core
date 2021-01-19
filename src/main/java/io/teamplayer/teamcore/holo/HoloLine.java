@@ -2,6 +2,7 @@ package io.teamplayer.teamcore.holo;
 
 import io.teamplayer.teamcore.entity.fake.FakeArmorStand;
 import io.teamplayer.teamcore.immutable.ImmutableLocation;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 /**
@@ -17,8 +18,7 @@ class HoloLine {
 
         armorStand = new FakeArmorStand(transformLocation(location.clone()));
 
-        armorStand.setCustomNameVisible(!content.equals(""));
-        armorStand.setCustomName(content);
+        setName(content);
         armorStand.setInvisible(true);
         armorStand.setSmall(true);
 
@@ -26,6 +26,7 @@ class HoloLine {
     }
 
     void setName(String content) {
+        Bukkit.getLogger().info("Setting content: " + content);
         armorStand.setCustomName(content);
         armorStand.setCustomNameVisible(!content.equals(""));
     }

@@ -7,7 +7,8 @@ final class FakeEntityBitMask extends BitMaskBuilder {
     private final static byte ON_FIRE = 0;
     private final static byte CROUCHED = 1;
     private final static byte SPRINTING = 3;
-    private final static byte INVISBLE = 5;
+    private final static byte SWIMMING = 4;
+    private final static byte INVISIBLE = 5;
     private final static byte GLOWING = 6;
     private final static byte ELYTRA_FLYING = 7;
 
@@ -35,12 +36,20 @@ final class FakeEntityBitMask extends BitMaskBuilder {
         return (FakeEntityBitMask) setBit(SPRINTING, sprinting);
     }
 
+    FakeEntityBitMask setSwimming(boolean swimming) {
+        return (FakeEntityBitMask) setBit(SWIMMING, swimming);
+    }
+
+    boolean isSwimming() {
+        return getBit(SWIMMING);
+    }
+
     boolean isInvisible() {
-        return getBit(INVISBLE);
+        return getBit(INVISIBLE);
     }
 
     FakeEntityBitMask setInvisible(boolean invisible) {
-        return (FakeEntityBitMask) setBit(INVISBLE, invisible);
+        return (FakeEntityBitMask) setBit(INVISIBLE, invisible);
     }
 
     boolean isGlowing() {

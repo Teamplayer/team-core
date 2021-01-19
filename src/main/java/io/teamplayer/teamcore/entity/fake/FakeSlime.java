@@ -2,7 +2,6 @@ package io.teamplayer.teamcore.entity.fake;
 
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 
 /**
  * A client-side slime
@@ -14,12 +13,12 @@ public class FakeSlime extends FakeEntity {
 
 
     public FakeSlime(Location location) {
-        super(EntityType.SLIME, location);
+        super(75, location);
     }
 
     public void setSize(int size) {
         this.size = size;
-        modifyMetadata(SIZE_INDEX, WrappedDataWatcher.Registry.get(Integer.class), size);
+        updateMetaData();
     }
 
     public int getSize() {

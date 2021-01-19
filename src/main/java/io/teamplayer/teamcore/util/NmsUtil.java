@@ -1,8 +1,8 @@
 package io.teamplayer.teamcore.util;
 
-import net.minecraft.server.v1_15_R1.World;
+import net.minecraft.server.v1_16_R3.World;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_15_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_16_R3.CraftWorld;
 
 /**
  * A utility class for doing common NMS methods

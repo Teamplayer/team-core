@@ -1,8 +1,7 @@
 name: TeamCore
+version: 1
 main: io.teamplayer.teamcore.TeamCore
-version: 2
-depend: ['ProtocolLib']
-commands:
-  fakespawn:
-  test:
-  slime:
+api-version: 1.16
+depend: [ProtocolLib]
+authors: [Teamplayer]
+description: Library Plugin
