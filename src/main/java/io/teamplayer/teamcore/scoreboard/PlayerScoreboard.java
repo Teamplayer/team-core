@@ -28,11 +28,11 @@ class PlayerScoreboard {
     private static int teamsCreated = 0;
 
     static {
-        final char rangeStart = 0xE900; //This the middle of a range of unused unicode characters
-        // that won't render as anything in the minecraft client
-        for (char i = rangeStart; i < rangeStart + SCOREBOARD_SIZE; i++) {
-            lineNames[i - rangeStart] = "§" + i ;
+        final char rangeStart = 0xE900;
+        for (int i = 0; i < SCOREBOARD_SIZE; i++) {
+            lineNames[SCOREBOARD_SIZE - 1 - i] = "§" + (char) ((int) rangeStart + i);
         }
+
 
     }
 
@@ -141,7 +141,7 @@ class PlayerScoreboard {
         final Score score = objective.getScore(lineNames[line]);
 
         if (visible) {
-            score.setScore(line + 1);
+            score.setScore((int) Double.NaN);
         } else {
             scoreboard.resetScores(lineNames[line]);
         }
