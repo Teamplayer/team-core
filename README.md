@@ -1,1 +1,1 @@
-wowow
+A minecraft library for Scoreboards, Holograms and other things in the future
