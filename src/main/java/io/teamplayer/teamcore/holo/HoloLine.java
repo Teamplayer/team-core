@@ -10,8 +10,8 @@ import org.bukkit.Location;
  */
 class HoloLine {
 
-    private FakeArmorStand armorStand;
-    private Location location;
+    private final FakeArmorStand armorStand;
+    private final Location location;
 
     HoloLine(String content, Location location) {
         this.location = location;

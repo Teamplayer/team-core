@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 public class Hologram implements ClientSideObject {
 
     private final List<HoloLine> lines;
-    private Location location;
+    private final Location location;
 
     private final Set<Player> viewers = new HashSet<>();
     private boolean global = true;

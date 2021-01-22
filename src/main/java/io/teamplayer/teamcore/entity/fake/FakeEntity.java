@@ -36,7 +36,7 @@ public class FakeEntity implements ClientSideObject {
     private Location location;
 
     private boolean global = true;
-    private Set<Player> viewers = new HashSet<>();
+    private final Set<Player> viewers = new HashSet<>();
 
     public FakeEntity(int typeId, Location location) {
         this.typeId = typeId;
@@ -384,14 +384,10 @@ public class FakeEntity implements ClientSideObject {
     void updateMetaData(Player player) {
         //if (!spawned) return;
 
-        Bukkit.getLogger().info("Updating Metadata for " + player.getDisplayName());
-
         final WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata();
 
         packet.setEntityID(entityId);
         packet.setMetadata(buildMetadata().getWatchableObjects());
-
-        Bukkit.getLogger().info(packet.toString());
 
         packet.sendPacket(player);
     }

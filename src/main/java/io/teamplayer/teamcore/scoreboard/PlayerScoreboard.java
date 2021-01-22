@@ -6,7 +6,6 @@ import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import org.bukkit.ChatColor;
-import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.StringUtils;
 import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.Validate;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.*;
