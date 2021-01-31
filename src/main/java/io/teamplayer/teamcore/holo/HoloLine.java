@@ -26,7 +26,6 @@ class HoloLine {
     }
 
     void setName(String content) {
-        Bukkit.getLogger().info("Setting content: " + content);
         armorStand.setCustomName(content);
         armorStand.setCustomNameVisible(!content.equals(""));
     }

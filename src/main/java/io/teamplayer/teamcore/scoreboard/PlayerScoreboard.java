@@ -1,12 +1,16 @@
 package io.teamplayer.teamcore.scoreboard;
 
+import com.comphenix.packetwrapper.WrapperPlayServerScoreboardDisplayObjective;
 import com.comphenix.packetwrapper.WrapperPlayServerScoreboardObjective;
+import com.comphenix.packetwrapper.WrapperPlayServerScoreboardScore;
 import com.comphenix.packetwrapper.WrapperPlayServerScoreboardTeam;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import org.bukkit.ChatColor;
-import org.bukkit.craftbukkit.libs.org.apache.commons.lang3.Validate;
 import org.bukkit.entity.Player;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.Scoreboard;
+
+import java.util.Collections;
 
 /**
  * Controls an individual player's scoreboard
@@ -20,15 +24,12 @@ class PlayerScoreboard {
     private final static String OBJECTIVE_NAME = "tc:obj";
     private final static String[] lineNames = new String[SCOREBOARD_SIZE];
 
-    private static int teamsCreated = 0;
-
     static {
+        //This is a random range of characters
         final char rangeStart = 0xE900;
         for (int i = 0; i < SCOREBOARD_SIZE; i++) {
             lineNames[SCOREBOARD_SIZE - 1 - i] = "§" + (char) ((int) rangeStart + i);
         }
-
-
     }
 
     private final Player player;
@@ -37,31 +38,12 @@ class PlayerScoreboard {
     PlayerScoreboard(Player player) {
         this.player = player;
 
-        if (!teams.containsKey(scoreboard)) {
-            for (byte i = 0; i < SCOREBOARD_SIZE; i++) {
-                final Team team;
-                final String teamName = teamsCreated + "tc";
+        sendTitlePacket("", true);
+        sendDisplayObjectivePacket();
 
-                if (scoreboard.getTeam(teamName) != null) {
-                    team = scoreboard.getTeam(teamName);
-                } else {
-                    team = scoreboard.registerNewTeam(teamsCreated + "tc");
-                }
-
-                teamsCreated++;
-                teams.put(scoreboard, team);
-                team.addEntry(lineNames[i]);
-            }
+        for (byte i = 0; i < SCOREBOARD_SIZE; i++) {
+            sendTeamPacket(i, "", true);
         }
-
-        if (scoreboard.getObjective(OBJECTIVE_NAME) == null) {
-            objective = scoreboard.registerNewObjective(OBJECTIVE_NAME, "dummy");
-            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        } else {
-            objective = scoreboard.getObjective(OBJECTIVE_NAME);
-        }
-
-        player.setScoreboard(scoreboard);
     }
 
     /**
@@ -78,18 +60,10 @@ class PlayerScoreboard {
      *
      * @param line    line NUMBER
      * @param content new line content. Can be null
-     * @throws IndexOutOfBoundsException when line is larger than the max scoreboard size
      */
     void setLine(byte line, String content) {
-        Validate.validIndex(lines, line, "Scoreboards can not have more than" + SCOREBOARD_SIZE +
-                " lines");
-        if (content != null) {
-            Validate.isTrue(content.length() <= MAX_LINE_SIZE, String.format("Lines " +
-                    "cannot have content that is longer than %d characters", MAX_LINE_SIZE));
-        }
-
-        if (content == null) { //Remove this scoreboard line
-            if (lines[line] != null) {
+        if (content == null) {
+            if (activeLines[line] != null) {
                 setVisible(line, false);
                 activeLines[line] = null;
             }
@@ -110,13 +84,16 @@ class PlayerScoreboard {
     }
 
     private void setVisible(byte line, boolean visible) {
-        final Score score = objective.getScore(lineNames[line]);
+        final WrapperPlayServerScoreboardScore updateScore = new WrapperPlayServerScoreboardScore();
 
-        if (visible) {
-            score.setScore((int) Double.NaN);
-        } else {
-            scoreboard.resetScores(lineNames[line]);
-        }
+        updateScore.setScoreName(lineNames[line]);
+        updateScore.setObjectiveName(OBJECTIVE_NAME);
+
+        updateScore.setScoreboardAction(visible ? EnumWrappers.ScoreboardAction.CHANGE :
+                EnumWrappers.ScoreboardAction.REMOVE);
+        if (visible) updateScore.setValue(0);
+
+        updateScore.sendPacket(player);
     }
 
     /**
