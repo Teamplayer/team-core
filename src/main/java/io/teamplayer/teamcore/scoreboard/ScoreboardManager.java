@@ -330,7 +330,7 @@ public class ScoreboardManager {
             final Player player = event.getPlayer();
 
             if (!playerScoreboards.containsKey(player)) {
-                playerScoreboards.put(player, new PlayerScoreboard(player, scoreboard));
+                playerScoreboards.put(player, new PlayerScoreboard(player));
                 event.getPlayer().setScoreboard(scoreboard);
             }
 
