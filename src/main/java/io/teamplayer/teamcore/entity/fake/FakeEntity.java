@@ -1,6 +1,7 @@
 package io.teamplayer.teamcore.entity.fake;
 
 import com.comphenix.packetwrapper.*;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import io.teamplayer.teamcore.immutable.ImmutableLocation;
@@ -9,6 +10,7 @@ import io.teamplayer.teamcore.wrapper.WrapperPlayServerSpawnEntityLiving;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,6 +26,8 @@ public class FakeEntity implements ClientSideObject {
     private final int typeId;
     private String customName = "";
     private boolean customNameVisible;
+    private final ItemStack[] equippedItems = new ItemStack[EnumWrappers.ItemSlot.values().length];
+    private final boolean[] equippedItemsPending = new boolean[EnumWrappers.ItemSlot.values().length]; //tracks if packet has been sente
 
     //Things bitmasked inside of the entity metadata at index 0
     private static final byte METADATA_INDEX = 0;
@@ -329,6 +333,29 @@ public class FakeEntity implements ClientSideObject {
         this.global = global;
     }
 
+    /**
+     * Set what itemstack to have in specified slot for entity
+     *
+     * @param item new itemstack (null to clear slot)
+     * @param slot slot to put item in
+     */
+    public void setEquipment(ItemStack item, EnumWrappers.ItemSlot slot) {
+        equippedItems[slot.ordinal()] = item;
+        equippedItemsPending[slot.ordinal()] = true;
+
+        updateEquipment(false);
+    }
+
+    /**
+     * Get itemstack that entity has in specified equipment slot
+     *
+     * @param slot slot to get equipment of
+     * @return optional containing equipped item
+     */
+    public Optional<ItemStack> getEquipment(EnumWrappers.ItemSlot slot) {
+        return Optional.ofNullable(equippedItems[slot.ordinal()]);
+    }
+
     //Override this method to handle custom metadata for entities
     protected WrappedDataWatcher buildMetadata() {
         final WrappedDataWatcher meta = new WrappedDataWatcher();
@@ -354,7 +381,6 @@ public class FakeEntity implements ClientSideObject {
 
     void spawn(Player player) {
         final WrapperPlayServerSpawnEntityLiving packet = new WrapperPlayServerSpawnEntityLiving();
-        //final WrapperPlayServerEntityMetadata metadataPacket = new WrapperPlayServerEntityMetadata();
 
         packet.setEntityID(entityId);
         packet.setType(typeId);
@@ -367,14 +393,10 @@ public class FakeEntity implements ClientSideObject {
         packet.setPitch(location.getPitch());
         packet.setHeadPitch(location.getYaw());
 
-        //metadataPacket.setEntityID(entityId);
-        //metadataPacket.setMetadata(buildMetadata().getWatchableObjects());
-
-
         packet.sendPacket(player);
-        //metadataPacket.sendPacket(receiver);
 
         updateMetaData();
+        updateEquipment(true);
     }
 
     void updateMetaData() {
@@ -390,6 +412,27 @@ public class FakeEntity implements ClientSideObject {
         packet.setMetadata(buildMetadata().getWatchableObjects());
 
         packet.sendPacket(player);
+    }
+
+    private void updateEquipment(boolean force) {
+        final EnumWrappers.ItemSlot[] slots = EnumWrappers.ItemSlot.values();
+        final io.teamplayer.teamcore.wrapper.WrapperPlayServerEntityEquipment packet =
+                new io.teamplayer.teamcore.wrapper.WrapperPlayServerEntityEquipment();
+        boolean changed = false;
+
+        for (int i = 0; i < slots.length; i++) {
+            if ((force || equippedItemsPending[i]) && equippedItems[i] != null) {
+
+                packet.setEntityID(entityId);
+                packet.setSlot(equippedItems[i], slots[i]);
+
+                equippedItemsPending[i] = false;
+
+                changed = true;
+            }
+        }
+
+        if (changed) sendPacket(packet);
     }
 
     private void updateEntityMask() {
