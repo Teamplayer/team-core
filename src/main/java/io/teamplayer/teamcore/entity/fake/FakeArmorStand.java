@@ -6,7 +6,7 @@ import org.bukkit.Location;
 /**
  * A client-side armor stand
  */
-public class FakeArmorStand extends FakeEntity {
+public class FakeArmorStand extends FakeLivingEntity {
 
     //Attributes masked inside of the metadata at index 11
     private static final byte METADATA_INDEX = 14;
@@ -63,6 +63,6 @@ public class FakeArmorStand extends FakeEntity {
 
 
     private void updateArmorStandMask() {
-        updateMetaData();
+        updateMetadata();
     }
 }

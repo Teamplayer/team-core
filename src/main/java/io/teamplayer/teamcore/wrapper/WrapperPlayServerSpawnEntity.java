@@ -21,6 +21,7 @@ package io.teamplayer.teamcore.wrapper;
 import java.util.UUID;
 
 import com.comphenix.packetwrapper.AbstractPacket;
+import net.minecraft.server.v1_16_R3.EntityTypes;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -30,58 +31,39 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.injector.PacketConstructor;
+import com.comphenix.protocol.reflect.IntEnum;
 
-public class WrapperPlayServerSpawnEntityLiving extends AbstractPacket {
-    public static final PacketType TYPE =
-            PacketType.Play.Server.SPAWN_ENTITY_LIVING;
+public class WrapperPlayServerSpawnEntity extends AbstractPacket {
+    public static final PacketType TYPE = PacketType.Play.Server.SPAWN_ENTITY;
 
     private static PacketConstructor entityConstructor;
 
-    public WrapperPlayServerSpawnEntityLiving() {
+    public WrapperPlayServerSpawnEntity() {
         super(new PacketContainer(TYPE), TYPE);
         handle.getModifier().writeDefaults();
     }
 
-    public WrapperPlayServerSpawnEntityLiving(PacketContainer packet) {
+    public WrapperPlayServerSpawnEntity(PacketContainer packet) {
         super(packet, TYPE);
     }
 
-    public WrapperPlayServerSpawnEntityLiving(Entity entity) {
-        super(fromEntity(entity), TYPE);
+    public WrapperPlayServerSpawnEntity(Entity entity, int type, int objectData) {
+        super(fromEntity(entity, type, objectData), TYPE);
     }
-
-    public static WrapperPlayServerSpawnEntityLiving fromSpawnEntity(WrapperPlayServerSpawnEntity packet) {
-        final WrapperPlayServerSpawnEntityLiving newPacket = new WrapperPlayServerSpawnEntityLiving();
-
-        newPacket.setEntityID(packet.getEntityID());
-        newPacket.setUniqueId(packet.getUniqueId());
-
-        newPacket.setX(packet.getX());
-        newPacket.setY(packet.getY());
-        newPacket.setZ(packet.getZ());
-
-        newPacket.setPitch(packet.getPitch());
-        newPacket.setYaw(packet.getYaw());
-
-        newPacket.setVelocityX(packet.getOptionalSpeedX());
-        newPacket.setVelocityY(packet.getOptionalSpeedY());
-        newPacket.setVelocityZ(packet.getOptionalSpeedZ());
-
-        return newPacket;
-    }
-
 
     // Useful constructor
-    private static PacketContainer fromEntity(Entity entity) {
+    private static PacketContainer fromEntity(Entity entity, int type,
+                                              int objectData) {
         if (entityConstructor == null)
             entityConstructor =
                     ProtocolLibrary.getProtocolManager()
-                            .createPacketConstructor(TYPE, entity);
-        return entityConstructor.createPacket(entity);
+                            .createPacketConstructor(TYPE, entity, type,
+                                    objectData);
+        return entityConstructor.createPacket(entity, type, objectData);
     }
 
     /**
-     * Retrieve entity ID.
+     * Retrieve entity ID of the Object.
      *
      * @return The current EID
      */
@@ -109,16 +91,8 @@ public class WrapperPlayServerSpawnEntityLiving extends AbstractPacket {
         return getEntity(event.getPlayer().getWorld());
     }
 
-    public UUID getUniqueId() {
-        return handle.getUUIDs().read(0);
-    }
-
-    public void setUniqueId(UUID value) {
-        handle.getUUIDs().write(0, value);
-    }
-
     /**
-     * Set entity ID.
+     * Set entity ID of the Object.
      *
      * @param value - new value.
      */
@@ -126,24 +100,12 @@ public class WrapperPlayServerSpawnEntityLiving extends AbstractPacket {
         handle.getIntegers().write(0, value);
     }
 
-    /**
-     * Retrieve the type of mob.
-     *
-     * @return The current Type
-     */
-    @SuppressWarnings("deprecation")
-    public EntityType getType() {
-        return EntityType.fromId(handle.getIntegers().read(1));
+    public UUID getUniqueId() {
+        return handle.getUUIDs().read(0);
     }
 
-    /**
-     * Set the type of mob.
-     *
-     * @param entityType - new value.
-     */
-    @SuppressWarnings("deprecation")
-    public void setType(int entityType) {
-        handle.getIntegers().write(1, entityType);
+    public void setUniqueId(UUID value) {
+        handle.getUUIDs().write(0, value);
     }
 
     /**
@@ -207,111 +169,136 @@ public class WrapperPlayServerSpawnEntityLiving extends AbstractPacket {
     }
 
     /**
-     * Retrieve the yaw.
+     * Retrieve the optional speed x.
+     * <p>
+     * This is ignored if {@link #getObjectData()} is zero.
      *
-     * @return The current Yaw
+     * @return The optional speed x.
      */
-    public float getYaw() {
-        return (handle.getBytes().read(0) * 360.F) / 256.0F;
+    public double getOptionalSpeedX() {
+        return handle.getIntegers().read(1) / 8000.0D;
     }
 
     /**
-     * Set the yaw of the spawned mob.
+     * Set the optional speed x.
      *
-     * @param value - new yaw.
+     * @param value - new value.
      */
-    public void setYaw(float value) {
-        handle.getBytes().write(0, (byte) (value * 256.0F / 360.0F));
+    public void setOptionalSpeedX(double value) {
+        handle.getIntegers().write(1, (int) (value * 8000.0D));
+    }
+
+    /**
+     * Retrieve the optional speed y.
+     * <p>
+     * This is ignored if {@link #getObjectData()} is zero.
+     *
+     * @return The optional speed y.
+     */
+    public double getOptionalSpeedY() {
+        return handle.getIntegers().read(2) / 8000.0D;
+    }
+
+    /**
+     * Set the optional speed y.
+     *
+     * @param value - new value.
+     */
+    public void setOptionalSpeedY(double value) {
+        handle.getIntegers().write(2, (int) (value * 8000.0D));
+    }
+
+    /**
+     * Retrieve the optional speed z.
+     * <p>
+     * This is ignored if {@link #getObjectData()} is zero.
+     *
+     * @return The optional speed z.
+     */
+    public double getOptionalSpeedZ() {
+        return handle.getIntegers().read(3) / 8000.0D;
+    }
+
+    /**
+     * Set the optional speed z.
+     *
+     * @param value - new value.
+     */
+    public void setOptionalSpeedZ(double value) {
+        handle.getIntegers().write(3, (int) (value * 8000.0D));
     }
 
     /**
      * Retrieve the pitch.
      *
-     * @return The current pitch
+     * @return The current pitch.
      */
     public float getPitch() {
-        return (handle.getBytes().read(1) * 360.F) / 256.0F;
+        return (handle.getIntegers().read(4) * 360.F) / 256.0F;
     }
 
     /**
-     * Set the pitch of the spawned mob.
+     * Set the pitch.
      *
      * @param value - new pitch.
      */
     public void setPitch(float value) {
-        handle.getBytes().write(1, (byte) (value * 256.0F / 360.0F));
+        handle.getIntegers().write(4, (int) (value * 256.0F / 360.0F));
     }
 
     /**
-     * Retrieve the yaw of the mob's head.
+     * Retrieve the yaw.
      *
-     * @return The current yaw.
+     * @return The current Yaw
      */
-    public float getHeadPitch() {
-        return (handle.getBytes().read(2) * 360.F) / 256.0F;
+    public float getYaw() {
+        return (handle.getIntegers().read(5) * 360.F) / 256.0F;
     }
 
     /**
-     * Set the yaw of the mob's head.
+     * Set the yaw of the object spawned.
      *
      * @param value - new yaw.
      */
-    public void setHeadPitch(float value) {
-        handle.getBytes().write(2, (byte) (value * 256.0F / 360.0F));
+    public void setYaw(float value) {
+        handle.getIntegers().write(5, (int) (value * 256.0F / 360.0F));
     }
 
     /**
-     * Retrieve the velocity in the x axis.
+     * Retrieve the type of mob.
      *
-     * @return The current velocity X
+     * @return The current Type
      */
-    public double getVelocityX() {
-        return handle.getIntegers().read(2) / 8000.0D;
+    public int getType() {
+        return handle.getIntegers().read(2);
     }
 
     /**
-     * Set the velocity in the x axis.
+     * Set the type of mob.
      *
-     * @param value - new value.
+     * @param entityType - new value.
      */
-    public void setVelocityX(double value) {
-        handle.getIntegers().write(2, (int) (value * 8000.0D));
+    public void setType(EntityType entityType) {
+        handle.getEntityTypeModifier().write(0, entityType);
     }
 
     /**
-     * Retrieve the velocity in the y axis.
-     *
-     * @return The current velocity y
+     * Retrieve object data.
+     * @return The current object Data
      */
-    public double getVelocityY() {
-        return handle.getIntegers().read(3) / 8000.0D;
+    public int getObjectData() {
+        return handle.getIntegers().read(6);
     }
 
     /**
-     * Set the velocity in the y axis.
+     * Set object Data.
+     * <p>
+     * The content depends on the object type. See {@link #getObjectData()} for
+     * more information.
      *
-     * @param value - new value.
+     * @param value - new object data.
      */
-    public void setVelocityY(double value) {
-        handle.getIntegers().write(3, (int) (value * 8000.0D));
+    public void setObjectData(int value) {
+        handle.getIntegers().write(6, value);
     }
-
-    /**
-     * Retrieve the velocity in the z axis.
-     *
-     * @return The current velocity z
-     */
-    public double getVelocityZ() {
-        return handle.getIntegers().read(4) / 8000.0D;
-    }
-
-    /**
-     * Set the velocity in the z axis.
-     *
-     * @param value - new value.
-     */
-    public void setVelocityZ(double value) {
-        handle.getIntegers().write(4, (int) (value * 8000.0D));
-    }
-
 }

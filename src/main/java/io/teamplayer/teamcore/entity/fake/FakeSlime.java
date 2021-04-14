@@ -6,7 +6,7 @@ import org.bukkit.Location;
 /**
  * A client-side slime
  */
-public class FakeSlime extends FakeEntity {
+public class FakeSlime extends FakeLivingEntity {
 
     private static final byte SIZE_INDEX = 12;
     private int size = 1;
@@ -18,7 +18,7 @@ public class FakeSlime extends FakeEntity {
 
     public void setSize(int size) {
         this.size = size;
-        updateMetaData();
+        updateMetadata();
     }
 
     public int getSize() {

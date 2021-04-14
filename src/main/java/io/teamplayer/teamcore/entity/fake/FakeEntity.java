@@ -6,50 +6,42 @@ import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import io.teamplayer.teamcore.immutable.ImmutableLocation;
 import io.teamplayer.teamcore.util.ClientSideObject;
-import io.teamplayer.teamcore.wrapper.WrapperPlayServerSpawnEntityLiving;
+import io.teamplayer.teamcore.wrapper.WrapperPlayServerEntityEquipment;
+import io.teamplayer.teamcore.wrapper.WrapperPlayServerSpawnEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
-import static com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
-
-/**
- * A client-side entity
- */
 public class FakeEntity implements ClientSideObject {
 
-    private final int typeId;
+    private final EntityType type;
     private String customName = "";
     private boolean customNameVisible;
+    private boolean noGravity = false;
     private final ItemStack[] equippedItems = new ItemStack[EnumWrappers.ItemSlot.values().length];
     private final boolean[] equippedItemsPending = new boolean[EnumWrappers.ItemSlot.values().length]; //tracks if packet has been sente
+    private FakeEntity[] passengers;
 
-    //Things bitmasked inside of the entity metadata at index 0
     private static final byte METADATA_INDEX = 0;
     private final FakeEntityBitMask mask = new FakeEntityBitMask();
 
     private boolean spawned = false;
 
-    private final int entityId = ThreadLocalRandom.current().nextInt();
+    protected final int entityId = ThreadLocalRandom.current().nextInt();
 
-    private Location location;
+    protected Location location;
 
     private boolean global = true;
     private final Set<Player> viewers = new HashSet<>();
 
-    public FakeEntity(int typeId, Location location) {
-        this.typeId = typeId;
+    public FakeEntity(EntityType type, Location location) {
+        this.type = type;
         this.location = location;
-    }
-
-    public FakeEntity(int entityid, Location location, boolean global) {
-        this(entityid, location);
-        this.global = global;
     }
 
     /**
@@ -103,9 +95,9 @@ public class FakeEntity implements ClientSideObject {
      * @param location the new fake entity location
      */
     public void move(Location location) {
-        final double xDiff = this.location.getX() - location.getX();
-        final double yDiff = this.location.getY() - location.getY();
-        final double zDiff = this.location.getZ() - location.getZ();
+        final double xDiff = location.getX() - this.location.getX();
+        final double yDiff = location.getY() - this.location.getY();
+        final double zDiff = location.getZ() - this.location.getZ();
 
 
         if (Math.abs(xDiff) > 8 || Math.abs(yDiff) > 8 || Math.abs(zDiff) > 8) {
@@ -114,7 +106,7 @@ public class FakeEntity implements ClientSideObject {
             return;
         }
 
-        move(xDiff, yDiff, zDiff);
+        move((short) xDiff, (short) yDiff, (short) zDiff);
     }
 
     /**
@@ -126,18 +118,18 @@ public class FakeEntity implements ClientSideObject {
      * @param zDiff difference in the z value
      * @throws IllegalArgumentException when entity movement is more than 8 units in any direction
      */
-    public void move(double xDiff, double yDiff, double zDiff) {
+    public void move(short xDiff, short yDiff, short zDiff) {
         if (Math.abs(xDiff) > 8 || Math.abs(yDiff) > 8 || Math.abs(zDiff) > 8) {
             throw new IllegalArgumentException("Entity movement cannot be any more than 8 units in any direction");
         }
 
-        final WrapperPlayServerRelEntityMove packet = new WrapperPlayServerRelEntityMove();
+        final io.teamplayer.teamcore.wrapper.WrapperPlayServerRelEntityMove packet = new io.teamplayer.teamcore.wrapper.WrapperPlayServerRelEntityMove();
 
         packet.setEntityID(entityId);
 
-        packet.setDx((int) calculateDelta(xDiff));
-        packet.setDy((int) calculateDelta(yDiff));
-        packet.setDz((int) calculateDelta(zDiff));
+        packet.setDx(xDiff);
+        packet.setDy(yDiff);
+        packet.setDz(zDiff);
 
         packet.setOnGround(false);
 
@@ -166,8 +158,118 @@ public class FakeEntity implements ClientSideObject {
         location.setPitch(pitch);
     }
 
-    public void updateLocation(Location newLocation) {
-        location = newLocation.clone();
+    /**
+     *
+     * @return a WrappedDataWatcher containing all of the metadata for this entity
+     */
+    protected WrappedDataWatcher buildMetadata() {
+        final WrappedDataWatcher meta = new WrappedDataWatcher();
+
+        meta.setObject(METADATA_INDEX, WrappedDataWatcher.Registry.get(Byte.class), mask.buildByte()); //Bitmasked data
+        meta.setObject((byte) 2, WrappedDataWatcher.Registry.getChatComponentSerializer(true),
+                Optional.of(WrappedChatComponent.fromText(customName).getHandle()));          //Custom name
+        meta.setObject(new WrappedDataWatcher.WrappedDataWatcherObject(3, WrappedDataWatcher.Registry.get(Boolean.class)),
+                customNameVisible); /*booleans need to be wrapped in a WrappedDataWatcherObject
+         because there is a method that takes a boolean as it's last value which doesn't do
+         that same thing */
+        meta.setObject(new WrappedDataWatcher.WrappedDataWatcherObject(5, WrappedDataWatcher.Registry.get(Boolean.class)),
+                noGravity);
+
+        return meta;
+    }
+
+    /**
+     * Destroy the entity client side for the specified player
+     */
+    private void destroy(Player... players) {
+        final WrapperPlayServerEntityDestroy packet = new WrapperPlayServerEntityDestroy();
+
+        packet.setEntityIds(new int[]{entityId});
+
+        Arrays.stream(players).forEach(packet::sendPacket);
+    }
+
+    /**
+     *
+     */
+    private void spawn(Player player) {
+        sendPacket(buildSpawnPacket());
+
+        updateMetadata();
+        updateEquipment(true);
+    }
+
+    protected AbstractPacket buildSpawnPacket() {
+        final WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity();
+
+        packet.setEntityID(entityId);
+        packet.setType(type);
+
+        packet.setX(location.getX());
+        packet.setY(location.getY());
+        packet.setZ(location.getZ());
+
+        packet.setYaw(location.getYaw());
+        packet.setPitch(location.getPitch());
+
+        return packet;
+    }
+
+    /**
+     * Updates all of the metadata for the entity and sends a new packet
+     */
+    protected final void updateMetadata() {
+        getViewers().forEach(this::sendMetadataPacket);
+    }
+
+    protected final void sendMetadataPacket(Player player) {
+        if (!spawned) return;
+
+        final WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata();
+
+        packet.setEntityID(entityId);
+        packet.setMetadata(buildMetadata().getWatchableObjects());
+
+        packet.sendPacket(player);
+    }
+
+    protected final void updateEquipment(boolean force) {
+        final EnumWrappers.ItemSlot[] slots = EnumWrappers.ItemSlot.values();
+        final WrapperPlayServerEntityEquipment packet = new WrapperPlayServerEntityEquipment();
+        
+        boolean changed = false;
+
+        for (int i = 0; i < slots.length; i++) {
+            if ((force || equippedItemsPending[i]) && equippedItems[i] != null) {
+
+                packet.setEntityID(entityId);
+                packet.setSlot(equippedItems[i], slots[i]);
+
+                equippedItemsPending[i] = false;
+
+                changed = true;
+            }
+        }
+
+        if (changed) sendPacket(packet);
+    }
+
+    /**
+     * Send packet to all viewers of FakeEntity
+     */
+    private void sendPacket(AbstractPacket packet) {
+        getViewers().forEach(packet::sendPacket);
+    }
+
+    /**
+     * Manually change the location of the FakeEntity
+     * This method does not actually move or teleport the FakeEntity,
+     * only changes it's internal location reference
+     *
+     * @param location new value
+     */
+    public void updateLocation(Location location) {
+        this.location = location.clone();
     }
 
     public int getEntityId() {
@@ -175,13 +277,14 @@ public class FakeEntity implements ClientSideObject {
     }
 
     /**
-     * Set the custom name that appears above the entities head
+     * Set the custom name that appears above the entities head.
+     * Ensure customNameVisible is true to see custom name
      *
      * @param customName the custom name
      */
     public void setCustomName(String customName) {
         this.customName = customName;
-        updateMetaData();
+        updateMetadata();
     }
 
     public String getCustomName() {
@@ -195,7 +298,24 @@ public class FakeEntity implements ClientSideObject {
      */
     public void setCustomNameVisible(boolean customNameVisible) {
         this.customNameVisible = customNameVisible;
-        updateMetaData();
+        updateMetadata();
+    }
+
+    public void setPassengers(FakeEntity... passengers) {
+        WrapperPlayServerMount packet = new WrapperPlayServerMount();
+
+        packet.setEntityID(entityId);
+        packet.setPassengerIds(Arrays.stream(passengers)
+                .mapToInt(FakeEntity::getEntityId)
+                .toArray());
+
+        sendPacket(packet);
+
+        this.passengers = passengers;
+    }
+
+    public Optional<FakeEntity[]> getPassengers() {
+        return Optional.ofNullable(passengers);
     }
 
     public boolean isCustomNameVisible() {
@@ -208,7 +328,7 @@ public class FakeEntity implements ClientSideObject {
 
     public void setOnFire(boolean onFire) {
         mask.setOnFire(onFire);
-        updateEntityMask();
+        updateMetadata();
     }
 
     public boolean isCrouched() {
@@ -217,7 +337,7 @@ public class FakeEntity implements ClientSideObject {
 
     public void setCrouched(boolean crouched) {
         mask.setCrouched(crouched);
-        updateEntityMask();
+        updateMetadata();
     }
 
     public boolean isSprinting() {
@@ -226,7 +346,7 @@ public class FakeEntity implements ClientSideObject {
 
     public void setSprinting(boolean sprinting) {
         mask.setSprinting(sprinting);
-        updateEntityMask();
+        updateMetadata();
     }
 
     public boolean isInvisible() {
@@ -235,7 +355,7 @@ public class FakeEntity implements ClientSideObject {
 
     public void setInvisible(boolean invisible) {
         mask.setInvisible(invisible);
-        updateEntityMask();
+        updateMetadata();
     }
 
     public boolean isGlowing() {
@@ -244,7 +364,7 @@ public class FakeEntity implements ClientSideObject {
 
     public void setGlowing(boolean glowing) {
         mask.setGlowing(glowing);
-        updateEntityMask();
+        updateMetadata();
     }
 
     public boolean isElytraFlying() {
@@ -253,7 +373,16 @@ public class FakeEntity implements ClientSideObject {
 
     public void setElytraFlying(boolean elytraFlying) {
         mask.setElytraFlying(elytraFlying);
-        updateEntityMask();
+        updateMetadata();
+    }
+
+    public boolean isNoGravity() {
+        return noGravity;
+    }
+
+    public void setNoGravity(boolean noGravity) {
+        this.noGravity = noGravity;
+        updateMetadata();
     }
 
     public Location getLocation() {
@@ -347,7 +476,7 @@ public class FakeEntity implements ClientSideObject {
     }
 
     /**
-     * Get itemstack that entity has in specified equipment slot
+     * Get ItemStack that entity has in specified equipment slot
      *
      * @param slot slot to get equipment of
      * @return optional containing equipped item
@@ -355,96 +484,4 @@ public class FakeEntity implements ClientSideObject {
     public Optional<ItemStack> getEquipment(EnumWrappers.ItemSlot slot) {
         return Optional.ofNullable(equippedItems[slot.ordinal()]);
     }
-
-    //Override this method to handle custom metadata for entities
-    protected WrappedDataWatcher buildMetadata() {
-        final WrappedDataWatcher meta = new WrappedDataWatcher();
-
-        meta.setObject(METADATA_INDEX, Registry.get(Byte.class), mask.buildByte()); //Bitmasked data
-        meta.setObject((byte) 2, Registry.getChatComponentSerializer(true),
-                Optional.of(WrappedChatComponent.fromText(customName).getHandle()));          //Custom name
-        meta.setObject(new WrappedDataWatcherObject(3, Registry.get(Boolean.class)),
-                customNameVisible); /*booleans need to be wrapped in a WrappedDataWatcherObject
-         because there is a method that takes a boolean as it's last value which doesn't do
-         that same thing */
-
-        return meta;
-    }
-
-    void destroy(Player... players) {
-        final WrapperPlayServerEntityDestroy packet = new WrapperPlayServerEntityDestroy();
-
-        packet.setEntityIds(new int[]{entityId});
-
-        Arrays.stream(players).forEach(packet::sendPacket);
-    }
-
-    void spawn(Player player) {
-        final WrapperPlayServerSpawnEntityLiving packet = new WrapperPlayServerSpawnEntityLiving();
-
-        packet.setEntityID(entityId);
-        packet.setType(typeId);
-
-        packet.setX(location.getX());
-        packet.setY(location.getY());
-        packet.setZ(location.getZ());
-
-        packet.setYaw(location.getYaw());
-        packet.setPitch(location.getPitch());
-        packet.setHeadPitch(location.getYaw());
-
-        packet.sendPacket(player);
-
-        updateMetaData();
-        updateEquipment(true);
-    }
-
-    void updateMetaData() {
-        getViewers().forEach(this::updateMetaData);
-    }
-
-    void updateMetaData(Player player) {
-        //if (!spawned) return;
-
-        final WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata();
-
-        packet.setEntityID(entityId);
-        packet.setMetadata(buildMetadata().getWatchableObjects());
-
-        packet.sendPacket(player);
-    }
-
-    private void updateEquipment(boolean force) {
-        final EnumWrappers.ItemSlot[] slots = EnumWrappers.ItemSlot.values();
-        final io.teamplayer.teamcore.wrapper.WrapperPlayServerEntityEquipment packet =
-                new io.teamplayer.teamcore.wrapper.WrapperPlayServerEntityEquipment();
-        boolean changed = false;
-
-        for (int i = 0; i < slots.length; i++) {
-            if ((force || equippedItemsPending[i]) && equippedItems[i] != null) {
-
-                packet.setEntityID(entityId);
-                packet.setSlot(equippedItems[i], slots[i]);
-
-                equippedItemsPending[i] = false;
-
-                changed = true;
-            }
-        }
-
-        if (changed) sendPacket(packet);
-    }
-
-    private void updateEntityMask() {
-        updateMetaData();
-    }
-
-    private void sendPacket(AbstractPacket packet) {
-        getViewers().forEach(packet::sendPacket);
-    }
-
-    private double calculateDelta(double diff) {
-        return diff * 4096;
-    }
-
 }

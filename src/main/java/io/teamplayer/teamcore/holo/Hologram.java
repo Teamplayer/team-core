@@ -1,7 +1,7 @@
 package io.teamplayer.teamcore.holo;
 
-import io.teamplayer.teamcore.util.ClientSideObject;
 import io.teamplayer.teamcore.entity.fake.FakeEntity;
+import io.teamplayer.teamcore.util.ClientSideObject;
 import io.teamplayer.teamcore.immutable.ImmutableLocation;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;

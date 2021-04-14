@@ -51,7 +51,7 @@
         <dependency>
             <groupId>com.comphenix</groupId>
             <artifactId>packetwrapper</artifactId>
-            <version>1.15.2</version>
+            <version>1.16.5</version>
         </dependency>
 
         <!--Common Libraries-->
